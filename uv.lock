@@ -871,11 +871,17 @@ name = "sistema-recomendacao-app"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "numpy" },
+    { name = "pandas" },
     { name = "polar" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "polar", specifier = ">=0.0.127" }]
+requires-dist = [
+    { name = "numpy", specifier = ">=2.4.4" },
+    { name = "pandas", specifier = ">=3.0.2" },
+    { name = "polar", specifier = ">=0.0.127" },
+]
 
 [[package]]
 name = "six"
