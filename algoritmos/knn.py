@@ -1,21 +1,16 @@
 import pandas as pd
+import numpy as np
 from importdataset import carregar_dataset_rating
 
 dataset_notas = carregar_dataset_rating()
+matriz_notas = np.array(dataset_notas)
 
-filmes_avaliados = []
-qnt_filmes = input("Quantos filmes deseja avaliar?\n")
+def knn_user_based():
+    notas = matriz_notas[:, 2]
+    usuarios = matriz_notas[:, 0]
 
-for i in range(int(qnt_filmes)):
-  filme = input(f"Qual o {i+1}º filme deseja avaliar?\n")
-  nota_filme = float(input(f"Qual a nota de {filme} (0-10)?\n"))
-  filmes_avaliados.append({
-      'filme': filme,
-      'nota_filme': nota_filme
-      })
+    mascara_notas = (notas > 0)
 
-for filme_info in filmes_avaliados:
-  print(f"Filme: {filme_info['filme']}, Nota: {filme_info['nota_filme']}")
+    usuarios_com_notas = usuarios[mascara_notas]
 
-def knn_user_based(dataset):
-    vizinhos_avaliaram_item =
+    return len(usuarios_com_notas)
