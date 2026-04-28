@@ -14,3 +14,17 @@ def knn_user_based():
     usuarios_com_notas = usuarios[mascara_notas]
 
     return len(usuarios_com_notas)
+
+def normalizacao_z_score(matriz):
+    matriz_np = np.array(matriz)
+
+    desvio_padrao = np.std(matriz_np)
+
+    if desvio_padrao == 0:
+        return 'Desvio padrão == 0'
+
+    media = np.mean(matriz_np)
+
+    matriz_normalizada = (matriz_np - media) / desvio_padrao
+
+    return matriz_normalizada
