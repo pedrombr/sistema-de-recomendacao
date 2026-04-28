@@ -82,25 +82,21 @@ def knn_user_based(user_id, k_vizinhos=5, n_recomendacoes=5, normalizar=False):
         if len(similaridades) == 0:
             return "Nenhum vizinho com gosto similar encontrado."
 
-        # 2. Pega os Top-K vizinhos mais próximos
         k_real = min(k_vizinhos, len(similaridades))
         indices_top_k = np.argsort(similaridades)[-k_real:]
 
         top_k_sims = similaridades[indices_top_k]
         top_k_users = usuarios_ids[indices_top_k]
 
-        # 3. Pega os IDs dos filmes que o usuário alvo AINDA NÃO ASSISTIU (nota == 0)
         filmes_nao_assistidos = matriz_notas.columns[vetor_alvo == 0]
 
         previsoes = []
 
-        # 4. Prevê a nota para os filmes não assistidos usando apenas as notas dos K vizinhos
         for filme_id in filmes_nao_assistidos:
             notas_vizinhos = matriz_notas.loc[top_k_users, filme_id].values
 
             mascara_assistiram = notas_vizinhos > 0
 
-            # Se nenhum dos vizinhos assistiu a esse filme, pula
             if not np.any(mascara_assistiram):
                 continue
 
@@ -114,7 +110,6 @@ def knn_user_based(user_id, k_vizinhos=5, n_recomendacoes=5, normalizar=False):
                 nota_prevista = numerador / denominador
                 previsoes.append((filme_id, nota_prevista))
 
-        # 5. Ordena as previsões da maior nota para a menor e pega o Top N
         previsoes.sort(key=lambda x: x[1], reverse=True)
         top_n_filmes = previsoes[:n_recomendacoes]
 
