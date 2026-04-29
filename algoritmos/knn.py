@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from importdataset import carregar_dataset_rating
 
+
 dataset_notas = carregar_dataset_rating()
 matriz_notas = np.array(dataset_notas)
 
@@ -20,6 +21,17 @@ matriz_notas = dataset_notas.pivot_table(
     values='Rating',
     fill_value = 0
 )
+
+#Parte do item-based, vai até a normalização
+valores_matriz = matriz_notas.values
+
+soma_notas_usuarios = np.sum(valores_matriz, axis=1)
+
+qtd_filmes_avaliados = np.sum(valores_matriz > 0, axis=1)
+
+medias_usuarios = np.zeros_like(soma_notas_usuarios, dtype=float)
+mascara_validas = qtd_filmes_avaliados > 0
+medias_usuarios[mascara_validas] = soma_notas_usuarios[mascara_validas] / qtd_filmes_avaliados[mascara_validas]
 
 def normalizacao_z_score(vetor_notas):
 
@@ -54,6 +66,30 @@ def similaridade_cosseno(vetor_X, vetor_Y):
     similaridade = produto_vetores / (norma_vetor_X * norma_vetor_Y)
 
     return similaridade
+
+def cosseno_ajustado(vetor_item_X, vetor_item_Y, vetor_medias_usuarios):
+    corelacionados = (vetor_item_X > 0) & (vetor_item_Y > 0)
+
+    if np.sum(corelacionados) < 2:
+        return 0.0
+
+    notas_X = vetor_item_X[corelacionados]
+    notas_Y = vetor_item_Y[corelacionados]
+
+    medias_filtradas = vetor_medias_usuarios[corelacionados]
+
+    sub_X = notas_X - medias_filtradas
+    sub_Y = notas_Y - medias_filtradas
+
+    numerador = np.dot(sub_X, sub_Y)
+    denominador = np.linalg.norm(sub_X) * np.linalg.norm(sub_Y)
+
+    if denominador == 0:
+        return 0.0
+
+    return numerador / denominador
+
+
 
 def correlacao_pearson(vetor_X, vetor_Y):
     #itens co-relacionados
@@ -142,6 +178,71 @@ def knn_user_based(user_id, k_vizinhos=5, n_recomendacoes=5, normalizar=False, m
         if denominador > 0:
             nota_prevista = numerador / denominador
             previsoes.append((filme_id, nota_prevista))
+
+    previsoes.sort(key=lambda x: x[1], reverse=True)
+    top_n_filmes = previsoes[:n_recomendacoes]
+
+    return top_n_filmes
+
+
+def knn_item_based(user_id, k_vizinhos=5, n_recomendacoes=5, normalizar=False, metrica="cosseno_ajustado"):
+    vetor_usuario = matriz_notas.loc[user_id].values
+
+    filmes_assistidos = matriz_notas.columns[vetor_usuario > 0]
+    filmes_nao_assistidos = matriz_notas.columns[vetor_usuario == 0]
+
+    if len(filmes_assistidos) == 0:
+        return "O usuário não avaliou nenhum filme para basearmos a recomendação."
+
+    previsoes = []
+
+    for filme_alvo in filmes_nao_assistidos:
+        vetor_filme_alvo = matriz_notas[filme_alvo].values
+
+        if normalizar:
+            vetor_filme_alvo = normalizacao_z_score(vetor_filme_alvo)
+
+        similaridades = []
+        notas_do_usuario = []
+
+        for filme_assistido in filmes_assistidos:
+            vetor_filme_assistido = matriz_notas[filme_assistido].values
+
+            if normalizar:
+                vetor_filme_assistido = normalizacao_z_score(vetor_filme_assistido)
+
+            sim = 0.0
+
+            if metrica == 'cosseno_ajustado':
+                sim = cosseno_ajustado(vetor_filme_alvo, vetor_filme_assistido, medias_usuarios)
+            elif metrica == 'pearson':
+                sim = correlacao_pearson(vetor_filme_alvo, vetor_filme_assistido)
+            elif metrica == 'cosseno':
+                sim = similaridade_cosseno(vetor_filme_alvo, vetor_filme_assistido)
+
+            if sim > 0:
+                similaridades.append(sim)
+                nota_dada = matriz_notas.loc[user_id, filme_assistido]
+                notas_do_usuario.append(nota_dada)
+
+        similaridades = np.array(similaridades)
+        notas_do_usuario = np.array(notas_do_usuario)
+
+        if len(similaridades) == 0:
+            continue
+
+        k_real = min(k_vizinhos, len(similaridades))
+        indices_top_k = np.argsort(similaridades)[-k_real:]
+
+        sims_validas = similaridades[indices_top_k]
+        notas_validas = notas_do_usuario[indices_top_k]
+
+        numerador = np.dot(sims_validas, notas_validas)
+        denominador = np.sum(np.abs(sims_validas))
+
+        if denominador > 0:
+            nota_prevista = numerador / denominador
+            previsoes.append((filme_alvo, nota_prevista))
 
     previsoes.sort(key=lambda x: x[1], reverse=True)
     top_n_filmes = previsoes[:n_recomendacoes]
