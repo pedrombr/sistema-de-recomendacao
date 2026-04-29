@@ -1,7 +1,6 @@
 from algoritmos.knn import knn_user_based, knn_item_based
 from importdataset import carregar_dataset_movies, carregar_dataset_user
 
-
 def main():
     usuario_teste = 10
 
