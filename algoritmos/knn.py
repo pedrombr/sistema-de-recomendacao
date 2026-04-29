@@ -55,7 +55,35 @@ def similaridade_cosseno(vetor_X, vetor_Y):
 
     return similaridade
 
-def knn_user_based(user_id, k_vizinhos=5, n_recomendacoes=5, normalizar=False):
+def correlacao_pearson(vetor_X, vetor_Y):
+    #itens co-relacionados
+    corelacionados = (vetor_X > 0) & (vetor_Y > 0)
+
+    vetor_X_corelato = vetor_X[corelacionados]
+    vetor_Y_corelato = vetor_Y[corelacionados]
+
+    if len(vetor_X_corelato) < 2:
+        return 0.0
+
+    media_vetor_X = np.mean(vetor_X_corelato)
+    media_vetor_Y = np.mean(vetor_Y_corelato)
+
+    sub_vetor_X = np.subtract(vetor_X_corelato, media_vetor_X)
+    sub_vetor_Y = np.subtract(vetor_Y_corelato, media_vetor_Y)
+
+    numerador = np.dot(sub_vetor_X,sub_vetor_Y)
+
+    denominador = np.linalg.norm(sub_vetor_X) * np.linalg.norm(sub_vetor_Y)
+
+    if numerador == 0:
+        return 0.0
+
+    pearson = numerador / denominador
+
+    return pearson
+
+
+def knn_user_based(user_id, k_vizinhos=5, n_recomendacoes=5, normalizar=False, metrica="pearson"):
 
     vetor_alvo = matriz_notas.loc[user_id].values
     vetor_alvo_calc = normalizacao_z_score(vetor_alvo) if normalizar else vetor_alvo
@@ -70,47 +98,52 @@ def knn_user_based(user_id, k_vizinhos=5, n_recomendacoes=5, normalizar=False):
         vetor_outro = matriz_notas.loc[outro_user].values
         vetor_outro_calc = normalizacao_z_score(vetor_outro) if normalizar else vetor_outro
 
-        sim = similaridade_cosseno(vetor_alvo_calc, vetor_outro_calc)
+        valor_similaridade = 0.0
 
-        if sim > 0:
-            similaridades.append(sim)
+        if metrica == 'cosseno':
+            valor_similaridade = similaridade_cosseno(vetor_alvo_calc, vetor_outro_calc)
+        if metrica == 'pearson':
+            valor_similaridade = correlacao_pearson(vetor_alvo_calc, vetor_outro_calc)
+
+        if valor_similaridade > 0:
+            similaridades.append(valor_similaridade)
             usuarios_ids.append(outro_user)
 
-        similaridades = np.array(similaridades)
-        usuarios_ids = np.array(usuarios_ids)
+    similaridades = np.array(similaridades)
+    usuarios_ids = np.array(usuarios_ids)
 
-        if len(similaridades) == 0:
-            return "Nenhum vizinho com gosto similar encontrado."
+    if len(similaridades) == 0:
+        return "Nenhum vizinho com gosto similar encontrado."
 
-        k_real = min(k_vizinhos, len(similaridades))
-        indices_top_k = np.argsort(similaridades)[-k_real:]
+    k_real = min(k_vizinhos, len(similaridades))
+    indices_top_k = np.argsort(similaridades)[-k_real:]
 
-        top_k_sims = similaridades[indices_top_k]
-        top_k_users = usuarios_ids[indices_top_k]
+    top_k_sims = similaridades[indices_top_k]
+    top_k_users = usuarios_ids[indices_top_k]
 
-        filmes_nao_assistidos = matriz_notas.columns[vetor_alvo == 0]
+    filmes_nao_assistidos = matriz_notas.columns[vetor_alvo == 0]
 
-        previsoes = []
+    previsoes = []
 
-        for filme_id in filmes_nao_assistidos:
-            notas_vizinhos = matriz_notas.loc[top_k_users, filme_id].values
+    for filme_id in filmes_nao_assistidos:
+        notas_vizinhos = matriz_notas.loc[top_k_users, filme_id].values
 
-            mascara_assistiram = notas_vizinhos > 0
+        mascara_assistiram = notas_vizinhos > 0
 
-            if not np.any(mascara_assistiram):
-                continue
+        if not np.any(mascara_assistiram):
+            continue
 
-            sims_validas = top_k_sims[mascara_assistiram]
-            notas_validas = notas_vizinhos[mascara_assistiram]
+        sims_validas = top_k_sims[mascara_assistiram]
+        notas_validas = notas_vizinhos[mascara_assistiram]
 
-            numerador = np.dot(sims_validas, notas_validas)
-            denominador = np.sum(np.abs(sims_validas))
+        numerador = np.dot(sims_validas, notas_validas)
+        denominador = np.sum(np.abs(sims_validas))
 
-            if denominador > 0:
-                nota_prevista = numerador / denominador
-                previsoes.append((filme_id, nota_prevista))
+        if denominador > 0:
+            nota_prevista = numerador / denominador
+            previsoes.append((filme_id, nota_prevista))
 
-        previsoes.sort(key=lambda x: x[1], reverse=True)
-        top_n_filmes = previsoes[:n_recomendacoes]
+    previsoes.sort(key=lambda x: x[1], reverse=True)
+    top_n_filmes = previsoes[:n_recomendacoes]
 
-        return top_n_filmes
+    return top_n_filmes
