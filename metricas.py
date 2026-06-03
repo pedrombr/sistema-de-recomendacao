@@ -1,30 +1,30 @@
 import numpy as np
-from importdataset import carregar_dataset_rating
+#from importdataset import carregar_dataset_rating
 
-dataset_notas = carregar_dataset_rating()
+#dataset_notas = carregar_dataset_rating()
 
-matriz_notas = np.array(dataset_notas)
+#matriz_notas = np.array(dataset_notas)
 
-notas = matriz_notas[:, 2]
-usuarios = matriz_notas[:, 0]
+#notas = matriz_notas[:, 2]
+#usuarios = matriz_notas[:, 0]
 
-matriz_notas = dataset_notas.pivot_table(
-    index='UserID',
-    columns='MovieID',
-    values='Rating',
-    fill_value = 0
-)
+#matriz_notas = dataset_notas.pivot_table(
+#    index='UserID',
+#    columns='MovieID',
+#   values='Rating',
+#    fill_value = 0
+#)
 
 #Parte do item-based, vai até a normalização
-valores_matriz = matriz_notas.values
+#valores_matriz = matriz_notas.values
 
-soma_notas_usuarios = np.sum(valores_matriz, axis=1)
+#soma_notas_usuarios = np.sum(valores_matriz, axis=1)
 
-qtd_filmes_avaliados = np.sum(valores_matriz > 0, axis=1)
+#qtd_filmes_avaliados = np.sum(valores_matriz > 0, axis=1)
 
-medias_usuarios = np.zeros_like(soma_notas_usuarios, dtype=float)
-mascara_validas = qtd_filmes_avaliados > 0
-medias_usuarios[mascara_validas] = soma_notas_usuarios[mascara_validas] / qtd_filmes_avaliados[mascara_validas]
+#medias_usuarios = np.zeros_like(soma_notas_usuarios, dtype=float)
+#mascara_validas = qtd_filmes_avaliados > 0
+#medias_usuarios[mascara_validas] = soma_notas_usuarios[mascara_validas] / qtd_filmes_avaliados[mascara_validas]
 
 def similaridade_cosseno(vetor_X, vetor_Y):
 
