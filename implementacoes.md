@@ -9,3 +9,4 @@
 * Quadro de comparação das similaridades
 * Conunto de teste, treino e validação
 * Função de erro
+* Shrinkage

@@ -43,21 +43,21 @@ def main():
         for posicao, (filme_id, nota_prevista) in enumerate(recomendacoes_item, 1):
             print(f"{posicao}º Lugar | Filme ID: {filme_id}")
 
-    # previsao e erro 
+    # previsao e erro
     print("\n=====================================================================")
     print("Iniciando a Hiperparametrização (Validação)")
-    
+
     # lista de k para testar
     valores_k = [5, 10, 15, 20]
-    
-    # dicionários para guardar os resultados 
+
+    # dicionários para guardar os resultados
     historico_mae_user = {}
     historico_mae_item = {}
 
     # loop da Hiperparametrização
     for k_atual in valores_k:
         print(f"\n--- Testando algoritmo para k = {k_atual} vizinhos ---")
-        
+
         erros_user_based = []
         erros_item_based = []
 
@@ -68,7 +68,7 @@ def main():
             nota_real = linha['Rating']
 
             prev_user = prever_nota_user_based(matriz_treino, usuario_alvo, filme_alvo, k_vizinhos=k_atual)
-            if prev_user > 0: 
+            if prev_user > 0:
                 erros_user_based.append(abs(nota_real - prev_user))
 
             prev_item = prever_nota_item_based(matriz_treino, medias_treino, usuario_alvo, filme_alvo, k_vizinhos=k_atual)
@@ -78,7 +78,7 @@ def main():
         # calculando o MAE para o K atual
         mae_user = sum(erros_user_based) / len(erros_user_based) if erros_user_based else 0
         mae_item = sum(erros_item_based) / len(erros_item_based) if erros_item_based else 0
-        
+
         # guardar a nota final do K no histórico
         historico_mae_user[k_atual] = mae_user
         historico_mae_item[k_atual] = mae_item
@@ -90,4 +90,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-# p999999999999
+#Teste para ver o update a branch main e o que acontece na branch do P9
