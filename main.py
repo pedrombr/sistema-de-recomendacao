@@ -3,6 +3,7 @@ from algoritmos.knn import knn_user_based, knn_item_based, prever_nota_user_base
 from algoritmos import svd_byfunk
 from importdataset import carregar_dataset_movies, carregar_dataset_user, carregar_dataset_rating
 from divisaodata import dividir_treino_val_teste
+from metricas import rmse
 
 def main():
     # carregar os dados
@@ -15,7 +16,7 @@ def main():
     print(f"Tamanho da Validação: {len(validacao)} linhas")
     print(f"Tamanho do Teste: {len(teste)} linhas")
 
-    """usuario_teste = 10
+    usuario_teste = 10
 
     # Transformando a lista em Matriz Usuário x Filme
     matriz_treino = treino.pivot_table(index='UserID', columns='MovieID', values='Rating').fillna(0)
@@ -52,8 +53,8 @@ def main():
     valores_k = [5, 10, 15, 20]
 
     # dicionários para guardar os resultados
-    historico_mae_user = {}
-    historico_mae_item = {}
+    historico_rmse_user = {}
+    historico_rmse_item = {}
 
     # loop da Hiperparametrização
     for k_atual in valores_k:
@@ -76,18 +77,19 @@ def main():
             if prev_item > 0:
                 erros_item_based.append(abs(nota_real - prev_item))
 
-        # calculando o MAE para o K atual
-        mae_user = sum(erros_user_based) / len(erros_user_based) if erros_user_based else 0
-        mae_item = sum(erros_item_based) / len(erros_item_based) if erros_item_based else 0
+        rmse_user = rmse(np.array(prev_item), np.array(nota_real))
+        rmse_item = rmse(np.array(prev_item), np.array(nota_real))
 
         # guardar a nota final do K no histórico
-        historico_mae_user[k_atual] = mae_user
-        historico_mae_item[k_atual] = mae_item
+        historico_rmse_user[k_atual] = rmse_user
+        historico_rmse_item[k_atual] = rmse_item
 
-        print(f"Erro Médio (MAE) User-Based: {mae_user:.4f} estrelas")
-        print(f"Erro Médio (MAE) Item-Based: {mae_item:.4f} estrelas")
+        print(f"Erro Médio (RMSE) User-Based: {rmse_user:.4f}")
+        print(f"Erro Médio (RMSE) Item-Based: {rmse_item:.4f}")
 
-"""
+    print(f"\nComeçando o SVD\n")
+
+
     #SVD
     model = svd_byfunk.SVD()
     model.train(treino)
