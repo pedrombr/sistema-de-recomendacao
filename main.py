@@ -1,5 +1,6 @@
 import numpy as np
 from algoritmos.knn import knn_user_based, knn_item_based, prever_nota_user_based, prever_nota_item_based
+from algoritmos import svd_byfunk
 from importdataset import carregar_dataset_movies, carregar_dataset_user, carregar_dataset_rating
 from divisaodata import dividir_treino_val_teste
 
@@ -14,7 +15,7 @@ def main():
     print(f"Tamanho da Validação: {len(validacao)} linhas")
     print(f"Tamanho do Teste: {len(teste)} linhas")
 
-    usuario_teste = 10
+    """usuario_teste = 10
 
     # Transformando a lista em Matriz Usuário x Filme
     matriz_treino = treino.pivot_table(index='UserID', columns='MovieID', values='Rating').fillna(0)
@@ -86,8 +87,11 @@ def main():
         print(f"Erro Médio (MAE) User-Based: {mae_user:.4f} estrelas")
         print(f"Erro Médio (MAE) Item-Based: {mae_item:.4f} estrelas")
 
+"""
+    #SVD
+    model = svd_byfunk.SVD()
+    model.train(treino)
+
 #| Nota Prevista: {nota_prevista:.2f}
 if __name__ == "__main__":
     main()
-
-#Teste para ver o update a branch main e o que acontece na branch do P9

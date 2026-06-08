@@ -90,3 +90,7 @@ def correlacao_pearson(vetor_X, vetor_Y):
     pearson = numerador / denominador
 
     return pearson
+
+def rmse(y_predict, y_real):
+    erro = np.sqrt(np.mean((y_real - y_predict) ** 2))
+    return erro
