@@ -2,6 +2,7 @@ import numpy as np
 from metricas import rmse
 
 class SVD:
+    valores_reg_para_testar = [0.01, 0.02, 0.05, 0.1]
 
     def __init__(self, k_factors=10, learning_rate=0.01, reg=0.02, epochs=20, random_state=1):
         self.k_factors = k_factors
