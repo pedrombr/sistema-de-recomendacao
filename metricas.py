@@ -69,7 +69,7 @@ def correlacao_pearson(vetor_X, vetor_Y):
     vetor_X_corelato = vetor_X[corelacionados]
     vetor_Y_corelato = vetor_Y[corelacionados]
 
-    if len(vetor_X_corelato) < 2:
+    if len(vetor_X_corelato) < 5:
         return 0.0
 
     media_vetor_X = np.mean(vetor_X_corelato)
@@ -82,10 +82,12 @@ def correlacao_pearson(vetor_X, vetor_Y):
 
     denominador = np.linalg.norm(sub_vetor_X) * np.linalg.norm(sub_vetor_Y)
 
-    if numerador == 0:
+    if denominador == 0:
         return 0.0
 
-    pearson = numerador / denominador
+    n = len(vetor_X_corelato)
+    shrinkage = n / (n + 10)
+    pearson = (numerador / denominador) * shrinkage
 
     return pearson
 

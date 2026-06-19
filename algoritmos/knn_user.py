@@ -67,16 +67,12 @@ class KNNUserBased:
 
         vetor_usuario = self.matriz_np[u_idx]
 
-        # filmes não assistidos
         filmes_nao_assistidos = np.where(vetor_usuario == 0)[0]
 
-        # similaridades do usuário
         similaridades_usuario = (self.matriz_similaridade[u_idx]).copy()
 
-        # remove próprio usuário
         similaridades_usuario[u_idx] = 0
 
-        # mantém positivas
         mascara_positiva = (similaridades_usuario > 0)
 
         if not np.any(mascara_positiva):
@@ -112,26 +108,17 @@ class KNNUserBased:
                 sims_validas = sims_validas[top_k_idx]
                 notas_validas = notas_validas[top_k_idx]
 
-            denominador = np.sum(
-                np.abs(sims_validas)
-            )
+            denominador = np.sum(np.abs(sims_validas))
 
             if denominador > 0:
 
-                nota_prevista = (
-                    np.dot(
-                        sims_validas,
-                        notas_validas
-                    ) / denominador
-                )
+                nota_prevista = (np.dot(sims_validas,notas_validas) / denominador)
 
                 filme_id = matriz_treino.columns[
                     filme_idx
                 ]
 
-                previsoes.append(
-                    (filme_id, float(nota_prevista))
-                )
+                previsoes.append((filme_id, float(nota_prevista)))
 
         previsoes.sort(
             key=lambda x: x[1],
@@ -141,18 +128,10 @@ class KNNUserBased:
         return previsoes[:self.n_recomendacoes]
 
 
-    def prever_nota_user_based(
-        self,
-        matriz_treino,
-        user_id,
-        filme_id
-    ):
+    def prever_nota_user_based(self, matriz_treino, user_id, filme_id):
 
         # verifica existência
-        if (
-            user_id not in self.user_to_idx
-            or filme_id not in self.item_to_idx
-        ):
+        if (user_id not in self.user_to_idx or filme_id not in self.item_to_idx):
             return 0
 
         u_idx = self.user_to_idx[user_id]
@@ -173,10 +152,7 @@ class KNNUserBased:
         usuarios_validos[u_idx] = False
 
         # mantém apenas similares positivos
-        mascara = (
-            usuarios_validos
-            & (similaridades > 0)
-        )
+        mascara = (usuarios_validos & (similaridades > 0))
 
         if not np.any(mascara):
             return 0
@@ -200,23 +176,14 @@ class KNNUserBased:
         if soma_pesos == 0:
             return 0
 
-        soma_notas_pesadas = np.dot(
-            sims_validas,
-            notas_validas
-        )
+        soma_notas_pesadas = np.dot(sims_validas,notas_validas)
 
-        nota_prevista = (
-            soma_notas_pesadas / soma_pesos
-        )
+        nota_prevista = (soma_notas_pesadas / soma_pesos)
 
         return float(nota_prevista)
 
 
-    def avaliar_rmse_user_based(
-        self,
-        matriz_treino,
-        matriz_teste
-    ):
+    def avaliar_rmse_user_based(self, matriz_treino, matriz_teste):
 
         y_pred = []
         y_real = []
@@ -224,9 +191,7 @@ class KNNUserBased:
         # cache numpy
         teste_values = matriz_teste.values
 
-        usuarios_idx, filmes_idx = np.where(
-            teste_values > 0
-        )
+        usuarios_idx, filmes_idx = np.where(teste_values > 0)
 
         usuarios_ids = matriz_teste.index.to_numpy()
         filmes_ids = matriz_teste.columns.to_numpy()
