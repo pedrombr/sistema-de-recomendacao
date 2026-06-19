@@ -18,15 +18,15 @@ def main():
     print(f"Tamanho da Validação: {len(validacao)} linhas")
     print(f"Tamanho do Teste: {len(teste)} linhas")
 
-    usuario_teste = 10
-
     # Transformando a lista em Matriz Usuário x Filme
     matriz_treino = treino.pivot_table(index='UserID', columns='MovieID', values='Rating').fillna(0)
     matriz_teste = teste.pivot_table(index='UserID', columns='MovieID', values='Rating').fillna(0)
+    matriz_validacao = validacao.pivot_table(index='UserID', columns='MovieID', values='Rating').fillna(0)
+
     # Cálculo da média para o Item-Based
     medias_treino = matriz_treino.replace(0, np.nan).mean(axis=1)
 
-    print("User based")
+    print("User based, k=15")
     inicio_user = time.time()
     modelo_knn_user = KNNUserBased(k_vizinhos=15, metrica='pearson')
     modelo_knn_user.fit(matriz_treino)
@@ -40,36 +40,47 @@ def main():
     tempo_knn_user = fim_user - inicio_user
     print(f'Tempo: {tempo_knn_user:.2f}s')
 
-    erro_user = modelo_knn_user.avaliar_rmse_user_based(matriz_treino,matriz_teste)
-    print(f'RMSE: {erro_user:.4f}')
-
+    erro_user = modelo_knn_user.avaliar_rmse_user_based(matriz_treino,matriz_treino)
+    print(f'RMSE Treino: {erro_user:.4f}')
     print("------------------------------")
-    #print("Item based")
-    #inicio_item = time.time()
-    #modelo_knn_item = KNNItemBased(k_vizinhos=5,metrica='cosseno_ajustado')
+    rmse_validacao = modelo_knn_user.avaliar_rmse_user_based(matriz_treino,matriz_validacao)
+    print(f'RMSE Validação: {rmse_validacao:.4f}')
+    print("------------------------------")
+    rmse_teste = modelo_knn_user.avaliar_rmse_user_based(matriz_treino, matriz_teste)
+    print(f'RMSE Teste: {rmse_teste:.4f}')
 
-    #modelo_knn_item.fit(matriz_treino,medias_treino)
+    """print("------------------------------")
+    print("Item based")
+    inicio_item = time.time()
+    modelo_knn_item = KNNItemBased(k_vizinhos=5,metrica='cosseno_ajustado')
 
-    #recomendacoes_item = modelo_knn_item.knn_item_based(matriz_treino,medias_treino,user_id=1)
-    #for posicao, (filme_id, nota) in enumerate(recomendacoes_item,start=1):
-    #    print(f'{posicao}º filme -> 'f'ID: {filme_id} | 'f'Nota prevista: {nota:.2f}')
+    modelo_knn_item.fit(matriz_treino,medias_treino)
 
-    #fim_item = time.time()
-    #tempo_knn_item = fim_item - inicio_item
-    #print(f'Tempo: {tempo_knn_item:.2f}s')
+    recomendacoes_item = modelo_knn_item.knn_item_based(matriz_treino,medias_treino,user_id=1)
+    for posicao, (filme_id, nota) in enumerate(recomendacoes_item,start=1):
+        print(f'{posicao}º filme -> 'f'ID: {filme_id} | 'f'Nota prevista: {nota:.2f}')
 
-    #erro_item = modelo_knn_item.avaliar_rmse_item_based(matriz_treino,matriz_teste,medias_treino)
-    #print(f'RMSE: {erro_item:.4f}')
+    fim_item = time.time()
+    tempo_knn_item = fim_item - inicio_item
+    print(f'Tempo: {tempo_knn_item:.2f}s')
+
+    erro_item = modelo_knn_item.avaliar_rmse_item_based(matriz_treino,matriz_teste,medias_treino)
+    print(f'RMSE: {erro_item:.4f}')
 
     print("------------------------------")
     #print("\nComeçando o SVD\n")
     #SVD
-    ##inicio_svd = time.time()
-    ##model = svd_byfunk.SVD()
-    ##model.train(treino)
-    ##fim_svd = time.time()
-    ##tempo_svd = fim_svd - inicio_svd
-    ##print(f'Tempo: {tempo_svd:.2f}s')
+    inicio_svd = time.time()
+    model = svd_byfunk.SVD()
+    model.train(treino)
+    fim_svd = time.time()
+    tempo_svd = fim_svd - inicio_svd
+    print(f'Tempo: {tempo_svd:.2f}s')"""
+
+
+if __name__ == "__main__":
+    main()
+
 
 # Nota Prevista: {nota_prevista:.2f}
 
@@ -86,6 +97,3 @@ def main():
 # print("\n Top Filmes Recomendados:")
 # for posicao, (filme_id, nota_prevista) in enumerate(recomendacoes_item, 1):
 #    print(f"{posicao}º Lugar | Filme ID: {filme_id}")
-
-if __name__ == "__main__":
-    main()
