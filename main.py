@@ -28,7 +28,7 @@ def main():
 
     print("User based")
     inicio_user = time.time()
-    modelo_knn_user = KNNUserBased(k_vizinhos=5, metrica='pearson')
+    modelo_knn_user = KNNUserBased(k_vizinhos=15, metrica='pearson')
     modelo_knn_user.fit(matriz_treino)
 
     recomendacoes_user = modelo_knn_user.knn_user_based(matriz_treino,user_id=1)
@@ -44,32 +44,32 @@ def main():
     print(f'RMSE: {erro_user:.4f}')
 
     print("------------------------------")
-    print("Item based")
-    inicio_item = time.time()
-    modelo_knn_item = KNNItemBased(k_vizinhos=5,metrica='cosseno_ajustado')
+    #print("Item based")
+    #inicio_item = time.time()
+    #modelo_knn_item = KNNItemBased(k_vizinhos=5,metrica='cosseno_ajustado')
 
-    modelo_knn_item.fit(matriz_treino,medias_treino)
+    #modelo_knn_item.fit(matriz_treino,medias_treino)
 
-    recomendacoes_item = modelo_knn_item.knn_item_based(matriz_treino,medias_treino,user_id=1)
-    for posicao, (filme_id, nota) in enumerate(recomendacoes_item,start=1):
-        print(f'{posicao}º filme -> 'f'ID: {filme_id} | 'f'Nota prevista: {nota:.2f}')
+    #recomendacoes_item = modelo_knn_item.knn_item_based(matriz_treino,medias_treino,user_id=1)
+    #for posicao, (filme_id, nota) in enumerate(recomendacoes_item,start=1):
+    #    print(f'{posicao}º filme -> 'f'ID: {filme_id} | 'f'Nota prevista: {nota:.2f}')
 
-    fim_item = time.time()
-    tempo_knn_item = fim_item - inicio_item
-    print(f'Tempo: {tempo_knn_item:.2f}s')
+    #fim_item = time.time()
+    #tempo_knn_item = fim_item - inicio_item
+    #print(f'Tempo: {tempo_knn_item:.2f}s')
 
-    erro_item = modelo_knn_item.avaliar_rmse_item_based(matriz_treino,matriz_teste,medias_treino)
-    print(f'RMSE: {erro_item:.4f}')
+    #erro_item = modelo_knn_item.avaliar_rmse_item_based(matriz_treino,matriz_teste,medias_treino)
+    #print(f'RMSE: {erro_item:.4f}')
 
     print("------------------------------")
-    print("\nComeçando o SVD\n")
+    #print("\nComeçando o SVD\n")
     #SVD
-    inicio_svd = time.time()
-    model = svd_byfunk.SVD()
-    model.train(treino)
-    fim_svd = time.time()
-    tempo_svd = fim_svd - inicio_svd
-    print(f'Tempo: {tempo_svd:.2f}s')
+    ##inicio_svd = time.time()
+    ##model = svd_byfunk.SVD()
+    ##model.train(treino)
+    ##fim_svd = time.time()
+    ##tempo_svd = fim_svd - inicio_svd
+    ##print(f'Tempo: {tempo_svd:.2f}s')
 
 # Nota Prevista: {nota_prevista:.2f}
 

@@ -1,12 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from metricas import (
-    similaridade_cosseno,
-    cosseno_ajustado,
-    correlacao_pearson,
-    rmse
-)
+from metricas import (similaridade_cosseno, cosseno_ajustado, correlacao_pearson, rmse)
 
 
 class KNNItemBased:
@@ -45,10 +40,7 @@ class KNNItemBased:
 
         vetor_normalizado = vetor_notas.copy().astype(float)
 
-        vetor_normalizado[notas_validas] = (
-            (vetor_notas[notas_validas] - media)
-            / desvio_padrao
-        )
+        vetor_normalizado[notas_validas] = ((vetor_notas[notas_validas] - media)/ desvio_padrao)
 
         return vetor_normalizado
 
@@ -98,10 +90,7 @@ class KNNItemBased:
                 sim = 0.0
 
                 # máscara vetorizada
-                correlacionados = (
-                    (vetor_i > 0)
-                    & (vetor_j > 0)
-                )
+                correlacionados = ((vetor_i > 0) & (vetor_j > 0))
 
                 if np.sum(correlacionados) < 2:
                     continue
@@ -118,10 +107,7 @@ class KNNItemBased:
 
                     numerador = np.dot(x, y)
 
-                    denominador = (
-                        np.linalg.norm(x)
-                        * np.linalg.norm(y)
-                    )
+                    denominador = (np.linalg.norm(x) * np.linalg.norm(y))
 
                     if denominador > 0:
                         sim = numerador / denominador
@@ -134,15 +120,9 @@ class KNNItemBased:
                     x_centralizado = x - x_media
                     y_centralizado = y - y_media
 
-                    numerador = np.dot(
-                        x_centralizado,
-                        y_centralizado
-                    )
+                    numerador = np.dot(x_centralizado, y_centralizado)
 
-                    denominador = (
-                        np.linalg.norm(x_centralizado)
-                        * np.linalg.norm(y_centralizado)
-                    )
+                    denominador = (np.linalg.norm(x_centralizado) * np.linalg.norm(y_centralizado))
 
                     if denominador > 0:
                         sim = numerador / denominador
@@ -166,192 +146,106 @@ class KNNItemBased:
         return self
 
 
-    def knn_item_based(
-        self,
-        matriz_treino,
-        medias_treino,
-        user_id
-    ):
+    def knn_item_based(self, matriz_treino, medias_treino, user_id):
 
         if user_id not in matriz_treino.index:
             return "Usuário não encontrado na base de treino"
 
         vetor_usuario = matriz_treino.loc[user_id].values
 
-        filmes_assistidos = (
-            matriz_treino.columns[vetor_usuario > 0]
-        )
+        filmes_assistidos = (matriz_treino.columns[vetor_usuario > 0])
 
-        filmes_nao_assistidos = (
-            matriz_treino.columns[vetor_usuario == 0]
-        )
+        filmes_nao_assistidos = (matriz_treino.columns[vetor_usuario == 0])
 
         if len(filmes_assistidos) == 0:
 
-            return (
-                "O usuário não avaliou nenhum filme "
-                "para basearmos a recomendação."
-            )
+            return ("O usuário não avaliou nenhum filme para basearmos a recomendação.")
 
         previsoes = []
 
         for filme_alvo in filmes_nao_assistidos:
 
-            similaridades = (
-                self.matriz_similaridade.loc[
-                    filme_alvo,
-                    filmes_assistidos
-                ]
-                .fillna(0)
-            )
+            similaridades = (self.matriz_similaridade.loc[filme_alvo,filmes_assistidos].fillna(0))
 
-            similaridades = (
-                similaridades[similaridades > 0]
-            )
+            similaridades = (similaridades[similaridades > 0])
 
             if similaridades.empty:
                 continue
 
-            top_k_similares = similaridades.nlargest(
-                self.k_vizinhos
-            )
+            top_k_similares = similaridades.nlargest(self.k_vizinhos)
 
-            notas_do_usuario = np.array([
-
-                matriz_treino.at[user_id, filme]
-
+            notas_do_usuario = np.array([matriz_treino.at[user_id, filme]
                 for filme in top_k_similares.index
             ])
 
             sims_validas = top_k_similares.values
 
-            numerador = np.dot(
-                sims_validas,
-                notas_do_usuario
-            )
+            numerador = np.dot(sims_validas, notas_do_usuario)
 
-            denominador = np.sum(
-                np.abs(sims_validas)
-            )
+            denominador = np.sum(np.abs(sims_validas))
 
             if denominador > 0:
 
-                nota_prevista = (
-                    numerador / denominador
-                )
+                nota_prevista = (numerador / denominador)
 
-                previsoes.append(
-                    (filme_alvo, nota_prevista)
-                )
+                previsoes.append((filme_alvo, nota_prevista))
 
-        previsoes.sort(
-            key=lambda x: x[1],
-            reverse=True
-        )
+        previsoes.sort(key=lambda x: x[1],reverse=True)
 
-        top_n_filmes = (
-            previsoes[:self.n_recomendacoes]
-        )
-
+        top_n_filmes = (previsoes[:self.n_recomendacoes])
         return top_n_filmes
 
 
-    def prever_nota_item_based(
-        self,
-        matriz_treino,
-        medias_treino,
-        user_id,
-        filme_id
-    ):
+    def prever_nota_item_based(self, matriz_treino, medias_treino, user_id, filme_id):
 
-        if (
-            filme_id not in matriz_treino.columns
-            or user_id not in matriz_treino.index
-        ):
+        if (filme_id not in matriz_treino.columns or user_id not in matriz_treino.index):
             return 0
 
         # filmes já assistidos
         notas_do_usuario = matriz_treino.loc[user_id]
 
-        filmes_assistidos = (
-            notas_do_usuario[
-                notas_do_usuario > 0
-            ].index
-        )
+        filmes_assistidos = (notas_do_usuario[notas_do_usuario > 0].index)
 
         if len(filmes_assistidos) == 0:
             return 0
 
-        similaridades = (
-            self.matriz_similaridade.loc[
-                filme_id,
-                filmes_assistidos
-            ]
-            .fillna(0)
-        )
+        similaridades = (self.matriz_similaridade.loc[filme_id, filmes_assistidos].fillna(0))
 
-        similaridades = (
-            similaridades[similaridades > 0]
-        )
+        similaridades = (similaridades[similaridades > 0])
 
         if similaridades.empty:
             return 0
 
         # top K filmes similares
-        top_k_similares = similaridades.nlargest(
-            self.k_vizinhos
-        )
+        top_k_similares = similaridades.nlargest(self.k_vizinhos)
 
         soma_pesos = top_k_similares.sum()
 
-        soma_notas_pesadas = sum(
-
-            top_k_similares[filme]
-            * matriz_treino.at[user_id, filme]
-
+        soma_notas_pesadas = sum(top_k_similares[filme] * matriz_treino.at[user_id, filme]
             for filme in top_k_similares.index
         )
 
-        nota_prevista = (
-            soma_notas_pesadas / soma_pesos
-        )
+        nota_prevista = (soma_notas_pesadas / soma_pesos)
 
         return nota_prevista
 
 
-    def avaliar_rmse_item_based(
-        self,
-        matriz_treino,
-        matriz_teste,
-        medias_treino
-    ):
+    def avaliar_rmse_item_based(self, matriz_treino, matriz_teste, medias_treino):
 
         y_pred = []
         y_real = []
 
         # percorre apenas avaliações reais
-        usuarios, filmes = np.where(
-            matriz_teste.values > 0
-        )
+        usuarios, filmes = np.where(matriz_teste.values > 0)
 
         for u, f in zip(usuarios, filmes):
 
             user_id = matriz_teste.index[u]
             filme_id = matriz_teste.columns[f]
 
-            nota_real = matriz_teste.at[
-                user_id,
-                filme_id
-            ]
+            nota_real = matriz_teste.at[user_id,filme_id]
 
-            nota_prevista = (
-                self.prever_nota_item_based(
-                    matriz_treino,
-                    medias_treino,
-                    user_id,
-                    filme_id
-                )
-            )
+            nota_prevista = (self.prever_nota_item_based(matriz_treino, medias_treino, user_id, filme_id))
 
             if nota_prevista > 0:
 
@@ -361,9 +255,6 @@ class KNNItemBased:
         y_pred = np.array(y_pred)
         y_real = np.array(y_real)
 
-        erro_rmse = rmse(
-            y_pred,
-            y_real
-        )
+        erro_rmse = rmse(y_pred, y_real)
 
         return erro_rmse
