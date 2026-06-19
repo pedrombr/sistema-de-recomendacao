@@ -41,15 +41,14 @@ def similaridade_cosseno(vetor_X, vetor_Y):
     return similaridade
 
 def cosseno_ajustado(vetor_item_X, vetor_item_Y, vetor_medias_usuarios):
-    corelacionados = (vetor_item_X > 0) & (vetor_item_Y > 0)
+    correlacionados = (vetor_item_X > 0) & (vetor_item_Y > 0)
+    medias_filtradas = vetor_medias_usuarios[correlacionados]
 
-    if np.sum(corelacionados) < 2:
+    if np.sum(correlacionados) < 2:
         return 0.0
 
-    notas_X = vetor_item_X[corelacionados]
-    notas_Y = vetor_item_Y[corelacionados]
-
-    medias_filtradas = vetor_medias_usuarios[corelacionados]
+    notas_X = vetor_item_X[correlacionados]
+    notas_Y = vetor_item_Y[correlacionados]
 
     sub_X = notas_X - medias_filtradas
     sub_Y = notas_Y - medias_filtradas
@@ -61,7 +60,6 @@ def cosseno_ajustado(vetor_item_X, vetor_item_Y, vetor_medias_usuarios):
         return 0.0
 
     return numerador / denominador
-
 
 
 def correlacao_pearson(vetor_X, vetor_Y):

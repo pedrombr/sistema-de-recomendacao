@@ -1,123 +1,179 @@
 import pandas as pd
 import numpy as np
-from metricas import similaridade_cosseno, cosseno_ajustado, correlacao_pearson, rmse #matriz_notas, medias_usuarios
+from metricas import (similaridade_cosseno, correlacao_pearson, rmse)
 
-def normalizacao_z_score(vetor_notas):
 
-    notas_validas = vetor_notas > 0
+class KNNUserBased:
 
-    if len(notas_validas) == 0:
-        return vetor_notas
+    def __init__(
+        self,
+        k_vizinhos=5,
+        n_recomendacoes=5,
+        normalizar=True,
+        metrica="pearson"
+    ):
 
-    media = np.mean(vetor_notas[notas_validas])
-    desvio_padrao = np.std(vetor_notas[notas_validas])
+        self.k_vizinhos = k_vizinhos
+        self.n_recomendacoes = n_recomendacoes
+        self.normalizar = normalizar
+        self.metrica = metrica
 
-    if desvio_padrao == 0:
-        return vetor_notas
-        #return 'Desvio padrão == 0'
+        self.matriz_similaridade = None
 
-    vetor_normalizado = vetor_notas.copy().astype(float)
 
-    vetor_normalizado[notas_validas] = (vetor_notas[notas_validas] - media) / desvio_padrao
-    return vetor_normalizado
+    def normalizacao_z_score(self, vetor_notas):
 
-def knn_user_based(matriz_treino, user_id, k_vizinhos=5, n_recomendacoes=5, normalizar=False, metrica="pearson"):
+        notas_validas = vetor_notas > 0
 
-    # Verifica se o usuário existe no treino
-    if user_id not in matriz_treino.index:
-         return "Usuário não encontrado na base de treino"
+        if np.sum(notas_validas) == 0:
+            return vetor_notas
 
-    vetor_alvo = matriz_treino.loc[user_id].values
-    vetor_alvo_calc = normalizacao_z_score(vetor_alvo) if normalizar else vetor_alvo
+        media = np.mean(vetor_notas[notas_validas])
+        desvio_padrao = np.std(vetor_notas[notas_validas])
 
-    similaridades = []
-    usuarios_ids = []
+        if desvio_padrao == 0:
+            return vetor_notas
 
-    for outro_user in matriz_treino.index:
-        if outro_user == user_id:
-            continue
+        vetor_normalizado = vetor_notas.copy().astype(float)
 
-        vetor_outro = matriz_treino.loc[outro_user].values
-        vetor_outro_calc = normalizacao_z_score(vetor_outro) if normalizar else vetor_outro
+        vetor_normalizado[notas_validas] = ((vetor_notas[notas_validas] - media)/ desvio_padrao)
 
-        valor_similaridade = 0.0
+        return vetor_normalizado
 
-        if metrica == 'cosseno':
-            valor_similaridade = similaridade_cosseno(vetor_alvo_calc, vetor_outro_calc)
-        if metrica == 'pearson':
-            valor_similaridade = correlacao_pearson(vetor_alvo_calc, vetor_outro_calc)
 
-        if valor_similaridade > 0:
-            similaridades.append(valor_similaridade)
-            usuarios_ids.append(outro_user)
+    def fit(self, matriz_treino):
 
-    similaridades = np.array(similaridades)
-    usuarios_ids = np.array(usuarios_ids)
+        self.matriz_treino = matriz_treino
 
-    if len(similaridades) == 0:
-        return "Nenhum vizinho com gosto similar encontrado."
+        # pré-cálculo das similaridades
+        self.matriz_similaridade = (matriz_treino.T.corr(method='pearson'))
 
-    k_real = min(k_vizinhos, len(similaridades))
-    indices_top_k = np.argsort(similaridades)[-k_real:]
+        return self
 
-    top_k_sims = similaridades[indices_top_k]
-    top_k_users = usuarios_ids[indices_top_k]
 
-    filmes_nao_assistidos = matriz_treino.columns[vetor_alvo == 0]
+    def knn_user_based(self, matriz_treino, user_id):
 
-    previsoes = []
+        # Verifica se o usuário existe no treino
+        if user_id not in matriz_treino.index:
+            return "Usuário não encontrado na base de treino"
 
-    for filme_id in filmes_nao_assistidos:
-        notas_vizinhos = matriz_treino.loc[top_k_users, filme_id].values
+        vetor_alvo = matriz_treino.loc[user_id].values
 
-        mascara_assistiram = notas_vizinhos > 0
+        filmes_nao_assistidos = (matriz_treino.columns[vetor_alvo == 0])
 
-        if not np.any(mascara_assistiram):
-            continue
+        similaridades_usuario = (self.matriz_similaridade[user_id].drop(user_id).fillna(0))
 
-        sims_validas = top_k_sims[mascara_assistiram]
-        notas_validas = notas_vizinhos[mascara_assistiram]
+        similaridades_usuario = (similaridades_usuario[similaridades_usuario > 0])
 
-        numerador = np.dot(sims_validas, notas_validas)
-        denominador = np.sum(np.abs(sims_validas))
+        if similaridades_usuario.empty:
+            return "Nenhum vizinho com gosto similar encontrado."
 
-        if denominador > 0:
-            nota_prevista = numerador / denominador
-            previsoes.append((filme_id, nota_prevista))
+        top_k_vizinhos = similaridades_usuario.nlargest(
+            self.k_vizinhos
+        )
 
-    previsoes.sort(key=lambda x: x[1], reverse=True)
-    top_n_filmes = previsoes[:n_recomendacoes]
+        previsoes = []
 
-    return top_n_filmes
+        for filme_id in filmes_nao_assistidos:
 
-# previsão de notas para user-based e item-based
+            notas_vizinhos = matriz_treino.loc[
+                top_k_vizinhos.index,
+                filme_id
+            ]
 
-def prever_nota_user_based(matriz_treino, user_id, filme_id, k_vizinhos=5):
+            mascara_assistiram = notas_vizinhos > 0
 
-    # ve se o filme e o usuário existem na matriz de treino
-    if filme_id not in matriz_treino.columns or user_id not in matriz_treino.index:
-        return 0
+            if not np.any(mascara_assistiram):
+                continue
 
-    # pega apenas os usuários que realmente avaliaram o filme alvo
-    usuarios_avaliaram = matriz_treino[matriz_treino[filme_id] > 0]
+            sims_validas = top_k_vizinhos[mascara_assistiram]
 
-    if usuarios_avaliaram.empty:
-        return 0
+            notas_validas = notas_vizinhos[mascara_assistiram]
 
-    # calcula a similaridade (Correlação) entre o usuário alvo e os outros
-    usuario_alvo = matriz_treino.loc[user_id]
-    similaridades = usuarios_avaliaram.apply(
-        lambda row: usuario_alvo.corr(row), axis=1
-    ).fillna(0)
+            numerador = np.dot(sims_validas,notas_validas)
 
-    # top K vizinhos com similaridade positiva
-    top_k_vizinhos = similaridades[similaridades > 0].nlargest(k_vizinhos)
+            denominador = np.sum(np.abs(sims_validas))
 
-    if top_k_vizinhos.empty:
-        return 0
+            if denominador > 0:
 
-    # calcula a média ponderada (Nota * Similaridade)
-    soma_pesos = top_k_vizinhos.sum()
-    soma_notas_pesadas = sum(top_k_vizinhos[vizinho] * matriz_treino.at[vizinho, filme_id] for vizinho in top_k_vizinhos.index)
+                nota_prevista = (numerador / denominador)
 
-    return soma_notas_pesadas / soma_pesos
+                previsoes.append((filme_id, nota_prevista))
+
+        previsoes.sort(key=lambda x: x[1],reverse=True)
+
+        top_n_filmes = (previsoes[:self.n_recomendacoes])
+
+        return top_n_filmes
+
+
+    def prever_nota_user_based(self,matriz_treino,user_id,filme_id):
+
+        # verifica usuário e filme
+        if (filme_id not in matriz_treino.columns or user_id not in matriz_treino.index):
+            return 0
+
+        # usuários que avaliaram o filme
+        usuarios_avaliaram = matriz_treino[
+            matriz_treino[filme_id] > 0
+        ]
+
+        if usuarios_avaliaram.empty:
+            return 0
+
+        # similaridades já pré-calculadas
+        similaridades = (self.matriz_similaridade[user_id].loc[usuarios_avaliaram.index].fillna(0))
+
+        # remove o próprio usuário
+        if user_id in similaridades.index:
+            similaridades = similaridades.drop(user_id)
+
+        # mantém apenas positivas
+        similaridades = (similaridades[similaridades > 0])
+
+        if similaridades.empty:
+            return 0
+
+        # top K vizinhos
+        top_k_vizinhos = similaridades.nlargest(self.k_vizinhos)
+
+        soma_pesos = top_k_vizinhos.sum()
+
+        soma_notas_pesadas = sum(
+            top_k_vizinhos[vizinho] * matriz_treino.at[vizinho, filme_id]
+            for vizinho in top_k_vizinhos.index
+        )
+
+        notas_previstas = (soma_notas_pesadas / soma_pesos)
+
+        return notas_previstas
+
+
+    def avaliar_rmse_user_based(self,matriz_treino,matriz_teste):
+
+        y_pred = []
+        y_real = []
+
+        # percorre apenas avaliações reais
+        usuarios, filmes = np.where(matriz_teste.values > 0)
+
+        for u, f in zip(usuarios, filmes):
+
+            user_id = matriz_teste.index[u]
+            filme_id = matriz_teste.columns[f]
+
+            nota_real = matriz_teste.at[user_id,filme_id]
+
+            nota_prevista = (self.prever_nota_user_based(matriz_treino,user_id,filme_id))
+
+            if nota_prevista > 0:
+
+                y_pred.append(nota_prevista)
+                y_real.append(nota_real)
+
+        y_pred = np.array(y_pred)
+        y_real = np.array(y_real)
+
+        erro_rmse = rmse(y_pred,y_real)
+
+        return erro_rmse
