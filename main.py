@@ -28,7 +28,7 @@ def main():
 
     print("User based, k=30")
     inicio_user = time.time()
-    modelo_knn_user = KNNUserBased(k_vizinhos=30, metrica='pearson')
+    modelo_knn_user = KNNUserBased(k_vizinhos=30, metrica='pearson_unha')
     modelo_knn_user.fit(matriz_treino)
 
     recomendacoes_user = modelo_knn_user.knn_user_based(matriz_treino,user_id=1)
@@ -52,7 +52,7 @@ def main():
     """print("------------------------------")
     print("Item based")
     inicio_item = time.time()
-    modelo_knn_item = KNNItemBased(k_vizinhos=5,metrica='cosseno_ajustado')
+    modelo_knn_item = KNNItemBased(k_vizinhos=30,metrica='cosseno_ajustado')
 
     modelo_knn_item.fit(matriz_treino,medias_treino)
 
@@ -64,10 +64,16 @@ def main():
     tempo_knn_item = fim_item - inicio_item
     print(f'Tempo: {tempo_knn_item:.2f}s')
 
-    erro_item = modelo_knn_item.avaliar_rmse_item_based(matriz_treino,matriz_teste,medias_treino)
-    print(f'RMSE: {erro_item:.4f}')
-
+    erro_item_treino = modelo_knn_item.avaliar_rmse_item_based(matriz_treino,matriz_treino,medias_treino)
+    print(f'RMSE: {erro_item_treino:.4f}')
     print("------------------------------")
+    erro_item_validacao = modelo_knn_item.avaliar_rmse_item_based(matriz_treino,matriz_validacao,medias_treino)
+    print(f'RMSE Validação: {erro_item_validacao:.4f}')
+    print("------------------------------")
+    erro_item_teste = modelo_knn_item.avaliar_rmse_item_based(matriz_treino, matriz_teste,medias_treino)
+    print(f'RMSE Teste: {erro_item_teste:.4f}')"""
+
+    """print("------------------------------")
     #print("\nComeçando o SVD\n")
     #SVD
     inicio_svd = time.time()

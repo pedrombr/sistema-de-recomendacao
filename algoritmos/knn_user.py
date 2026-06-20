@@ -5,21 +5,14 @@ from metricas import (similaridade_cosseno, correlacao_pearson, rmse)
 
 class KNNUserBased:
 
-    valores_k_para_testar = [5, 10, 15, 20]
+    valores_k_para_testar = [10, 15, 20, 25, 27, 30, 35]
 
-    def __init__(
-        self,
-        k_vizinhos=5,
-        n_recomendacoes=5,
-        normalizar=True,
-        metrica="pearson"
-    ):
+    def __init__(self, k_vizinhos=5, n_recomendacoes=5, normalizar=True, metrica="pearson"):
 
         self.k_vizinhos = k_vizinhos
         self.n_recomendacoes = n_recomendacoes
         self.normalizar = normalizar
         self.metrica = metrica
-
         self.matriz_similaridade = None
 
 
@@ -47,12 +40,29 @@ class KNNUserBased:
 
         self.matriz_treino = matriz_treino
         self.matriz_np = matriz_treino.values.astype(np.float32)
-
         self.user_to_idx = {user_id: idx for idx, user_id in enumerate(matriz_treino.index)}
-
         self.item_to_idx = {filme_id: idx for idx, filme_id in enumerate(matriz_treino.columns)}
 
-        self.matriz_similaridade = (matriz_treino.T.corr(method='pearson').fillna(0).values.astype(np.float32))
+        if self.metrica == 'pearson':
+            self.matriz_similaridade = (matriz_treino.T.corr(method='pearson').fillna(0).values.astype(np.float32))
+        elif self.metrica == 'pearson_unha':
+            n_users = self.matriz_np.shape[0]
+            self.matriz_similaridade = np.zeros((n_users, n_users),dtype=np.float32)
+
+            for i in range(n_users):
+                vetor_i = self.matriz_np[i]
+                for j in range(i, n_users):
+                    if i == j:
+
+                        self.matriz_similaridade[i, j] = 1.0
+                        continue
+
+                    vetor_j = self.matriz_np[j]
+
+                    sim = correlacao_pearson(vetor_i,vetor_j)
+
+                    self.matriz_similaridade[i, j] = sim
+                    self.matriz_similaridade[j, i] = sim
 
         return self
 
