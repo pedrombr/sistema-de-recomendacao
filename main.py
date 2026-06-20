@@ -26,9 +26,13 @@ def main():
     # Cálculo da média para o Item-Based
     medias_treino = matriz_treino.replace(0, np.nan).mean(axis=1)
     #[10, 15, 20, 25, 27, 30, 35, 40]
-    print("User based, k=30")
+
     inicio_user = time.time()
     modelo_knn_user = KNNUserBased(k_vizinhos=30, metrica='pearson_unha')
+    print("--- Configurações do KNN user based ---")
+    print(f"K vizinhos (k): {modelo_knn_user.k_vizinhos}")
+    print(f"Métrica usada: {modelo_knn_user.metrica}")
+    print("-----------------------------------")
     modelo_knn_user.fit(matriz_treino)
 
     recomendacoes_user = modelo_knn_user.knn_user_based(matriz_treino,user_id=1)
@@ -49,10 +53,14 @@ def main():
     rmse_teste = modelo_knn_user.avaliar_rmse_user_based(matriz_treino, matriz_teste)
     print(f'RMSE Teste: {rmse_teste:.4f}')
 
-    """print("------------------------------")
+    print("------------------------------")
     print("Item based")
     inicio_item = time.time()
     modelo_knn_item = KNNItemBased(k_vizinhos=30,metrica='cosseno_ajustado')
+    print("--- Configurações do KNN item based ---")
+    print(f"K vizinhos (k): {modelo_knn_item.k_vizinhos}")
+    print(f"Métrica usada: {modelo_knn_item.metrica}")
+    print("-----------------------------------")
 
     modelo_knn_item.fit(matriz_treino,medias_treino)
 
@@ -71,17 +79,36 @@ def main():
     print(f'RMSE Validação: {erro_item_validacao:.4f}')
     print("------------------------------")
     erro_item_teste = modelo_knn_item.avaliar_rmse_item_based(matriz_treino, matriz_teste,medias_treino)
-    print(f'RMSE Teste: {erro_item_teste:.4f}')"""
+    print(f'RMSE Teste: {erro_item_teste:.4f}')
 
-    """print("------------------------------")
-    #print("\nComeçando o SVD\n")
-    #SVD
+    print("------------------------------")
     inicio_svd = time.time()
-    model = svd_byfunk.SVD()
-    model.train(treino)
+
+    modelo_svd = svd_byfunk.SVD(reg=0.02, k_factors=10, epochs=20, learning_rate=0.005)
+    print("--- Configurações do Modelo SVD ---")
+    print(f"Fatores Latentes (k): {modelo_svd.k_factors}")
+    print(f"Épocas de Treino: {modelo_svd.n_epochs}")
+    print(f"Taxa de Aprendizado: {modelo_svd.learning_rate}")
+    print(f"Termo de Regularização: {modelo_svd.reg}")
+    print("-----------------------------------")
+
+    modelo_svd.train(treino)
+
     fim_svd = time.time()
     tempo_svd = fim_svd - inicio_svd
-    print(f'Tempo: {tempo_svd:.2f}s')"""
+    print(f'Tempo de execução: {tempo_svd:.2f}s')
+
+    rmse_treino_svd = modelo_svd.avaliar_rmse_svd(treino)
+    print(f'RMSE Treino: {rmse_treino_svd:.4f}')
+    print("------------------------------")
+
+    rmse_validacao_svd = modelo_svd.avaliar_rmse_svd(validacao)
+    print(f'RMSE Validação: {rmse_validacao_svd:.4f}')
+    print("------------------------------")
+
+    rmse_teste_svd = modelo_svd.avaliar_rmse_svd(teste)
+    print(f'RMSE Teste: {rmse_teste_svd:.4f}')
+    print("------------------------------")
 
 
 if __name__ == "__main__":

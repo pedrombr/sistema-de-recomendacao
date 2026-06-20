@@ -4,7 +4,7 @@ from metricas import rmse
 class SVD:
     valores_reg_para_testar = [0.01, 0.02, 0.05, 0.1]
 
-    def __init__(self, k_factors=10, learning_rate=0.01, reg=0.02, epochs=20, random_state=1):
+    def __init__(self, k_factors=20, learning_rate=0.01, reg=0.02, epochs=20, random_state=1):
         self.k_factors = k_factors
         self.learning_rate = learning_rate
         self.reg = reg
@@ -59,3 +59,21 @@ class SVD:
         i = item_id - 1
 
         return (self.media_global + self.u_bias[u] + self.i_bias[i] + np.dot(self.P[u], self.Q[i]))
+
+    def avaliar_rmse_svd(self, base_df):
+        lista_prev = []
+        lista_real = []
+
+        for _, linha in base_df.iterrows():
+            user_id = int(linha['UserID'])
+            filme_id = int(linha['MovieID'])
+            nota_real = linha['Rating']
+
+            try:
+                prev = self.predict(user_id, filme_id)
+                lista_prev.append(prev)
+                lista_real.append(nota_real)
+            except IndexError:
+                pass
+
+        return rmse(np.array(lista_prev), np.array(lista_real))
