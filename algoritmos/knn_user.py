@@ -39,14 +39,48 @@ class KNNUserBased:
     def fit(self, matriz_treino):
 
         self.matriz_treino = matriz_treino
-        self.matriz_np = matriz_treino.values.astype(np.float32)
+        #self.matriz_np = matriz_treino.values.astype(np.float32)
+        self.matriz_original = (matriz_treino.values.astype(np.float32))
+        self.matriz_np = (self.matriz_original.copy())
         self.user_to_idx = {user_id: idx for idx, user_id in enumerate(matriz_treino.index)}
         self.item_to_idx = {filme_id: idx for idx, filme_id in enumerate(matriz_treino.columns)}
+        n_users = self.matriz_np.shape[0]
+
+
+        self.medias_usuarios = np.zeros(n_users,dtype=np.float32)
+        self.desvios_usuarios = np.ones(n_users,dtype=np.float32)
+
+        #normalização dos dados
+        if self.normalizar:
+
+            for i in range(n_users):
+                vetor_original = (self.matriz_np[i])
+
+                notas_validas = (vetor_original > 0)
+
+                if np.sum(notas_validas) == 0:
+                    continue
+
+                media = np.mean(vetor_original[notas_validas])
+
+                desvio = np.std(vetor_original[notas_validas])
+
+                if desvio == 0:
+                    desvio = 1.0
+
+                self.medias_usuarios[i] = media
+                self.desvios_usuarios[i] = desvio
+
+                self.matriz_np[i] = (self.normalizacao_z_score(vetor_original))
 
         if self.metrica == 'pearson':
-            self.matriz_similaridade = (matriz_treino.T.corr(method='pearson').fillna(0).values.astype(np.float32))
+            self.matriz_similaridade = (pd.DataFrame(
+                            self.matriz_np,
+                            index=matriz_treino.index,
+                            columns=matriz_treino.columns
+                        ).T.corr(method='pearson').fillna(0).values.astype(np.float32))
         elif self.metrica == 'pearson_unha':
-            n_users = self.matriz_np.shape[0]
+
             self.matriz_similaridade = np.zeros((n_users, n_users),dtype=np.float32)
 
             for i in range(n_users):
@@ -94,7 +128,9 @@ class KNNUserBased:
 
             notas_filme = self.matriz_np[:, filme_idx]
 
-            mascara_avaliaram = ((notas_filme > 0)& mascara_positiva)
+            notas_filme = self.matriz_np[:, filme_idx]
+
+            mascara_avaliaram = ((self.matriz_original[:, filme_idx] > 0) & mascara_positiva)
 
             if not np.any(mascara_avaliaram):
                 continue
@@ -150,7 +186,7 @@ class KNNUserBased:
         # usuários que avaliaram o filme
         notas_filme = self.matriz_np[:, f_idx]
 
-        usuarios_validos = notas_filme > 0
+        usuarios_validos = (self.matriz_original[:, f_idx] > 0)
 
         if not np.any(usuarios_validos):
             return 0
@@ -158,10 +194,8 @@ class KNNUserBased:
         # similaridades do usuário alvo
         similaridades = self.matriz_similaridade[u_idx]
 
-        # remove próprio usuário
         usuarios_validos[u_idx] = False
 
-        # mantém apenas similares positivos
         mascara = (usuarios_validos & (similaridades > 0))
 
         if not np.any(mascara):
@@ -188,7 +222,17 @@ class KNNUserBased:
 
         soma_notas_pesadas = np.dot(sims_validas,notas_validas)
 
-        nota_prevista = (soma_notas_pesadas / soma_pesos)
+        nota_prevista_normalizada = (soma_notas_pesadas / soma_pesos)
+
+        if self.normalizar:
+            media_usuario = (self.medias_usuarios[u_idx])
+
+            desvio_usuario = (self.desvios_usuarios[u_idx])
+
+            nota_prevista = (media_usuario + (nota_prevista_normalizada * desvio_usuario))
+
+        else:
+            nota_prevista = (nota_prevista_normalizada)
 
         return float(nota_prevista)
 

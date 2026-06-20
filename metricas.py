@@ -63,7 +63,6 @@ def cosseno_ajustado(vetor_item_X, vetor_item_Y, vetor_medias_usuarios):
 
 
 def correlacao_pearson(vetor_X, vetor_Y):
-    #itens co-relacionados
     corelacionados = (vetor_X > 0) & (vetor_Y > 0)
 
     vetor_X_corelato = vetor_X[corelacionados]
@@ -86,7 +85,7 @@ def correlacao_pearson(vetor_X, vetor_Y):
         return 0.0
 
     n = len(vetor_X_corelato)
-    shrinkage = n / (n + 10)
+    shrinkage = n / (n + 5)
     pearson = (numerador / denominador) * shrinkage
 
     return pearson

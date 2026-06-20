@@ -28,7 +28,7 @@ def main():
 
     print("User based, k=30")
     inicio_user = time.time()
-    modelo_knn_user = KNNUserBased(k_vizinhos=30, metrica='pearson_unha')
+    modelo_knn_user = KNNUserBased(k_vizinhos=300, metrica='pearson_unha')
     modelo_knn_user.fit(matriz_treino)
 
     recomendacoes_user = modelo_knn_user.knn_user_based(matriz_treino,user_id=1)
