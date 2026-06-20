@@ -25,10 +25,10 @@ def main():
 
     # Cálculo da média para o Item-Based
     medias_treino = matriz_treino.replace(0, np.nan).mean(axis=1)
-
+    #[10, 15, 20, 25, 27, 30, 35, 40]
     print("User based, k=30")
     inicio_user = time.time()
-    modelo_knn_user = KNNUserBased(k_vizinhos=300, metrica='pearson_unha')
+    modelo_knn_user = KNNUserBased(k_vizinhos=30, metrica='pearson_unha')
     modelo_knn_user.fit(matriz_treino)
 
     recomendacoes_user = modelo_knn_user.knn_user_based(matriz_treino,user_id=1)
