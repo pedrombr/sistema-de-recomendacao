@@ -26,9 +26,9 @@ def main():
     # Cálculo da média para o Item-Based
     medias_treino = matriz_treino.replace(0, np.nan).mean(axis=1)
 
-    print("User based, k=30")
+    print("User based, k=55")
     inicio_user = time.time()
-    modelo_knn_user = KNNUserBased(k_vizinhos=300, metrica='pearson_unha')
+    modelo_knn_user = KNNUserBased(k_vizinhos=55, metrica='pearson_unha')
     modelo_knn_user.fit(matriz_treino)
 
     recomendacoes_user = modelo_knn_user.knn_user_based(matriz_treino,user_id=1)
@@ -73,15 +73,33 @@ def main():
     erro_item_teste = modelo_knn_item.avaliar_rmse_item_based(matriz_treino, matriz_teste,medias_treino)
     print(f'RMSE Teste: {erro_item_teste:.4f}')"""
 
-    """print("------------------------------")
-    #print("\nComeçando o SVD\n")
-    #SVD
+    # SVD BYFUNK
+    print("------------------------------")
+    print("SVD, reg=0.02")
+    print("SVD, k_factors=10")
+    print("SVD, learning_rate=0.005")
     inicio_svd = time.time()
-    model = svd_byfunk.SVD()
-    model.train(treino)
+    
+    # 1. Instancia e Treina o modelo
+    modelo_svd = svd_byfunk.SVD(reg=0.02, k_factors=10, epochs=20, learning_rate=0.005) 
+    modelo_svd.train(treino)
+    
     fim_svd = time.time()
     tempo_svd = fim_svd - inicio_svd
-    print(f'Tempo: {tempo_svd:.2f}s')"""
+    print(f'Tempo de execução: {tempo_svd:.2f}s')
+    
+    # 2. Avaliação chamando o método de dentro da classe!
+    rmse_treino_svd = modelo_svd.avaliar_rmse_svd(treino)
+    print(f'RMSE Treino: {rmse_treino_svd:.4f}')
+    print("------------------------------")
+    
+    rmse_validacao_svd = modelo_svd.avaliar_rmse_svd(validacao)
+    print(f'RMSE Validação: {rmse_validacao_svd:.4f}')
+    print("------------------------------")
+    
+    rmse_teste_svd = modelo_svd.avaliar_rmse_svd(teste)
+    print(f'RMSE Teste: {rmse_teste_svd:.4f}')
+    print("------------------------------")
 
 
 if __name__ == "__main__":
