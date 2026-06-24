@@ -1,20 +1,15 @@
 import pandas as pd
 import numpy as np
-from metricas import (similaridade_cosseno, cosseno_ajustado, correlacao_pearson, rmse)
-
+from metricas import (similaridade_cosseno, cosseno_ajustado ,correlacao_pearson, rmse)
 
 class KNNItemBased:
 
-    # lista de k para testar no KNN
-    valores_k_para_testar = [10, 15, 20, 25, 27, 30, 35]
-
-    def __init__(self, k_vizinhos=5, n_recomendacoes=5, normalizar=True, metrica="cosseno_ajustado"):
+    def __init__(self, k_vizinhos=5, n_recomendacoes=5, normalizar=True, metrica="pearson"):
 
         self.k_vizinhos = k_vizinhos
         self.n_recomendacoes = n_recomendacoes
         self.normalizar = normalizar
         self.metrica = metrica
-
         self.matriz_similaridade = None
 
 
@@ -27,42 +22,93 @@ class KNNItemBased:
 
         media = np.mean(vetor_notas[notas_validas])
         desvio_padrao = np.std(vetor_notas[notas_validas])
+        vetor_normalizado = (vetor_notas.copy().astype(float))
 
         if desvio_padrao == 0:
-            return vetor_notas
+            vetor_normalizado[notas_validas] = 0.0
+            return vetor_normalizado
 
-        vetor_normalizado = vetor_notas.copy().astype(float)
-
-        vetor_normalizado[notas_validas] = ((vetor_notas[notas_validas] - media)/ desvio_padrao)
+        vetor_normalizado[notas_validas] = ((vetor_notas[notas_validas] - media) / desvio_padrao)
 
         return vetor_normalizado
 
 
-    def fit(self, matriz_treino, medias_treino):
+    def fit(self, matriz_treino):
 
-            self.matriz_treino = matriz_treino
+        self.matriz_treino = matriz_treino
+        self.matriz_original = (matriz_treino.values.astype(np.float32))
+        self.matriz_np = (self.matriz_original.copy())
+        self.user_to_idx = {user_id: idx for idx, user_id in enumerate(matriz_treino.index)}
+        self.item_to_idx = {filme_id: idx for idx, filme_id in enumerate(matriz_treino.columns)}
 
-            self.matriz_np = (matriz_treino.values.astype(np.float32))
+        n_items = self.matriz_np.shape[1]
 
-            self.medias_treino = (np.asarray(medias_treino,dtype=np.float32))
+        self.medias_itens = np.zeros(n_items, dtype=np.float32)
 
-            self.user_to_idx = {user_id: idx for idx, user_id in enumerate(matriz_treino.index)}
+        self.desvios_itens = np.ones(n_items, dtype=np.float32)
 
-            self.item_to_idx = {filme_id: idx for idx, filme_id in enumerate(matriz_treino.columns)}
+        # NORMALIZAÇÃO POR ITEM
+        if self.normalizar:
 
-            filmes = matriz_treino.columns
-            n_filmes = len(filmes)
+            for j in range(n_items):
 
-            self.matriz_similaridade = np.zeros((n_filmes, n_filmes),dtype=np.float32)
+                vetor_original = (self.matriz_np[:, j])
+                notas_validas = (vetor_original > 0)
 
-            for i in range(n_filmes):
+                if np.sum(notas_validas) == 0:
+                    continue
 
+                media = np.mean(vetor_original[notas_validas])
+                desvio = np.std(vetor_original[notas_validas])
+
+                if desvio == 0:
+                    desvio = 1.0
+
+                self.medias_itens[j] = media
+                self.desvios_itens[j] = desvio
+
+                self.matriz_np[:, j] = (self.normalizacao_z_score(vetor_original))
+
+        # MATRIZ DE SIMILARIDADE ENTRE ITENS
+        if self.metrica == 'cosseno_ajustado':
+            medias_usuarios = np.zeros(self.matriz_np.shape[0],dtype=np.float32)
+
+            for u in range(self.matriz_np.shape[0]):
+
+                notas_usuario = self.matriz_original[u]
+                notas_validas = notas_usuario > 0
+
+                if np.sum(notas_validas) > 0:
+                    medias_usuarios[u] = np.mean(notas_usuario[notas_validas])
+
+            self.matriz_similaridade = np.zeros((n_items, n_items),dtype=np.float32)
+
+            for i in range(n_items):
+
+                vetor_i = self.matriz_original[:, i]
+
+                for j in range(i, n_items):
+                    if i == j:
+                        self.matriz_similaridade[i, j] = 1.0
+                        continue
+
+                    vetor_j = self.matriz_original[:, j]
+                    sim = cosseno_ajustado(vetor_i, vetor_j, medias_usuarios)
+
+                    self.matriz_similaridade[i, j] = sim
+                    self.matriz_similaridade[j, i] = sim
+
+        elif self.metrica == "pearson":
+
+            self.matriz_similaridade = (pd.DataFrame(self.matriz_np, index=matriz_treino.index, columns=matriz_treino.columns).corr(method="pearson").fillna(0).values.astype(np.float32))
+
+        elif self.metrica == "pearson_unha":
+
+            self.matriz_similaridade = np.zeros((n_items, n_items),dtype=np.float32)
+
+            for i in range(n_items):
                 vetor_i = self.matriz_np[:, i]
-
-                if self.normalizar:
-                    vetor_i = self.normalizacao_z_score(vetor_i)
-
-                for j in range(i, n_filmes):
+                for j in range(i, n_items):
 
                     if i == j:
 
@@ -71,180 +117,118 @@ class KNNItemBased:
 
                     vetor_j = self.matriz_np[:, j]
 
-                    if self.normalizar:
-                        vetor_j = (self.normalizacao_z_score(vetor_j))
-
-                    correlacionados = ((vetor_i > 0) & (vetor_j > 0))
-
-                    if np.sum(correlacionados) < 5:
-                        continue
-
-                    x = vetor_i[correlacionados]
-                    y = vetor_j[correlacionados]
-
-                    sim = 0.0
-
-                    if self.metrica == "cosseno_ajustado":
-
-                        medias = (self.medias_treino[correlacionados])
-                        sim = cosseno_ajustado(x, y,medias)
-
-                    elif self.metrica == "pearson":
-
-                        sim = correlacao_pearson(x,y)
-
-                    elif self.metrica == "cosseno":
-
-                        sim = similaridade_cosseno(x, y)
-
-                    # shrinkage
-                    n = len(x)
-
-                    shrinkage = n / (n + 10)
-
-                    sim *= shrinkage
+                    sim = correlacao_pearson(vetor_i,vetor_j)
 
                     self.matriz_similaridade[i, j] = sim
                     self.matriz_similaridade[j, i] = sim
 
-            return self
+        return self
 
 
-    def knn_item_based(self,matriz_treino,medias_treino,user_id):
+    def prever_nota_item_based(self, matriz_treino, user_id, filme_id):
 
-            if user_id not in self.user_to_idx:
-                return (
-                    "Usuário não encontrado "
-                    "na base de treino"
-                )
+        if (user_id not in self.user_to_idx or filme_id not in self.item_to_idx):
+            return 0
 
-            u_idx = self.user_to_idx[user_id]
+        u_idx = self.user_to_idx[user_id]
+        f_idx = self.item_to_idx[filme_id]
 
-            vetor_usuario = self.matriz_np[u_idx]
+        notas_usuario = (self.matriz_original[u_idx])
+        filmes_avaliados = (notas_usuario > 0)
 
-            filmes_assistidos = np.where(
-                vetor_usuario > 0
-            )[0]
+        # remove o próprio filme
+        filmes_avaliados[f_idx] = False
 
-            filmes_nao_assistidos = np.where(
-                vetor_usuario == 0
-            )[0]
+        if not np.any(filmes_avaliados):
+            return 0
 
-            if len(filmes_assistidos) == 0:
+        similaridades = (self.matriz_similaridade[f_idx])
 
-                return ("O usuário não avaliou nenhum filme.")
+        mascara = (filmes_avaliados & (similaridades > 0))
 
-            previsoes = []
+        if not np.any(mascara):
+            return 0
 
-            for filme_alvo_idx in filmes_nao_assistidos:
+        sims_validas = (similaridades[mascara])
+        notas_validas = (self.matriz_np[u_idx, mascara])
 
-                similaridades = (self.matriz_similaridade[filme_alvo_idx,filmes_assistidos])
+        # TOP K
+        if len(sims_validas) > self.k_vizinhos:
+            top_k_idx = np.argpartition(sims_validas, -self.k_vizinhos)[-self.k_vizinhos:]
+            sims_validas = (sims_validas[top_k_idx])
+            notas_validas = (notas_validas[top_k_idx])
 
-                mascara = similaridades > 0
+        denominador = np.sum(np.abs(sims_validas))
 
-                if not np.any(mascara):
-                    continue
+        if denominador == 0:
+            return 0
 
-                sims_validas = similaridades[mascara]
+        # previsão normalizada
+        nota_prevista_normalizada = (np.dot(sims_validas, notas_validas) / denominador)
 
-                filmes_validos = filmes_assistidos[mascara]
+        # DESNORMALIZAÇÃO POR ITEM
+        if self.normalizar:
+            media_item = (self.medias_itens[f_idx])
+            desvio_item = (self.desvios_itens[f_idx])
+            nota_prevista = (media_item + (nota_prevista_normalizada * desvio_item))
 
-                notas_usuario = vetor_usuario[filmes_validos]
+        else:
+            nota_prevista = (nota_prevista_normalizada)
 
-                if len(sims_validas) > self.k_vizinhos:
+        nota_prevista = np.clip(nota_prevista,1,5)
 
-                    top_k_idx = np.argpartition(sims_validas,-self.k_vizinhos)[-self.k_vizinhos:]
-
-                    sims_validas = (sims_validas[top_k_idx])
-
-                    notas_usuario = (notas_usuario[top_k_idx])
-
-                denominador = np.sum(np.abs(sims_validas))
-
-                if denominador > 0:
-
-                    nota_prevista = (np.dot(sims_validas,notas_usuario) / denominador)
-
-                    filme_id = (matriz_treino.columns[filme_alvo_idx])
-
-                    previsoes.append((filme_id,float(nota_prevista)))
-
-            previsoes.sort(key=lambda x: x[1],reverse=True)
-
-            return previsoes[ :self.n_recomendacoes]
+        return float(nota_prevista)
 
 
-    def prever_nota_item_based(self, matriz_treino, medias_treino, user_id,filme_id):
+    def item_based(self, matriz_treino, user_id):
 
-            if (user_id not in self.user_to_idx or filme_id not in self.item_to_idx):
-                return 0
+        if user_id not in self.user_to_idx:
+            return "Usuário não encontrado"
 
-            u_idx = self.user_to_idx[user_id]
-            f_idx = self.item_to_idx[filme_id]
+        u_idx = self.user_to_idx[user_id]
+        vetor_usuario = (self.matriz_original[u_idx])
 
-            vetor_usuario = self.matriz_np[u_idx]
+        filmes_nao_assistidos = np.where(vetor_usuario == 0)[0]
 
-            filmes_assistidos = np.where(vetor_usuario > 0)[0]
+        previsoes = []
 
-            if len(filmes_assistidos) == 0:
-                return 0
+        for filme_idx in filmes_nao_assistidos:
 
-            similaridades = (self.matriz_similaridade[f_idx,filmes_assistidos])
+            filme_id = (matriz_treino.columns[filme_idx])
 
-            mascara = similaridades > 0
+            nota_prevista = (self.prever_nota_item_based(matriz_treino, user_id, filme_id))
 
-            if not np.any(mascara):
-                return 0
+            if nota_prevista > 0:
+                previsoes.append((filme_id, float(nota_prevista)))
 
-            sims_validas = similaridades[mascara]
+        previsoes.sort(key=lambda x: x[1], reverse=True)
 
-            filmes_validos = filmes_assistidos[mascara]
-
-            notas_usuario = vetor_usuario[filmes_validos]
-
-            if len(sims_validas) > self.k_vizinhos:
-
-                top_k_idx = np.argpartition(sims_validas,-self.k_vizinhos)[-self.k_vizinhos:]
-
-                sims_validas = (sims_validas[top_k_idx])
-
-                notas_usuario = (notas_usuario[top_k_idx])
-
-            soma_pesos = np.sum(np.abs(sims_validas))
-
-            if soma_pesos == 0:
-                return 0
-
-            nota_prevista = (np.dot(sims_validas,notas_usuario) / soma_pesos)
-
-            return float(nota_prevista)
+        return previsoes[:self.n_recomendacoes]
 
 
-    def avaliar_rmse_item_based(self, matriz_treino, matriz_teste, medias_treino):
+    def avaliar_rmse_item_based(self, matriz_treino, matriz_teste):
 
         y_pred = []
         y_real = []
 
-        # percorre apenas avaliações reais
-        usuarios, filmes = np.where(matriz_teste.values > 0)
+        teste_values = matriz_teste.values
+        usuarios_idx, filmes_idx = np.where(teste_values > 0)
+        usuarios_ids = (matriz_teste.index.to_numpy())
+        filmes_ids = (matriz_teste.columns.to_numpy())
 
-        for u, f in zip(usuarios, filmes):
+        for u, f in zip(usuarios_idx, filmes_idx):
 
-            user_id = matriz_teste.index[u]
-            filme_id = matriz_teste.columns[f]
-
-            nota_real = matriz_teste.at[user_id,filme_id]
-
-            nota_prevista = (self.prever_nota_item_based(matriz_treino, medias_treino, user_id, filme_id))
+            user_id = usuarios_ids[u]
+            filme_id = filmes_ids[f]
+            nota_real = teste_values[u, f]
+            nota_prevista = (self.prever_nota_item_based(matriz_treino, user_id, filme_id))
 
             if nota_prevista > 0:
 
                 y_pred.append(nota_prevista)
                 y_real.append(nota_real)
 
-        y_pred = np.array(y_pred)
-        y_real = np.array(y_real)
+        y_pred = np.asarray(y_pred, dtype=np.float32)
+        y_real = np.asarray(y_real, dtype=np.float32)
 
-        erro_rmse = rmse(y_pred, y_real)
-
-        return erro_rmse
+        return rmse(y_pred, y_real)

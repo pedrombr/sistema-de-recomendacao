@@ -5,8 +5,6 @@ from metricas import (similaridade_cosseno, correlacao_pearson, rmse)
 
 class KNNUserBased:
 
-    valores_k_para_testar = [10, 15, 20, 25, 27, 30, 35, 40]
-
     def __init__(self, k_vizinhos=5, n_recomendacoes=5, normalizar=True, metrica="pearson"):
 
         self.k_vizinhos = k_vizinhos

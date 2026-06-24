@@ -27,7 +27,7 @@ def main():
     medias_treino = matriz_treino.replace(0, np.nan).mean(axis=1)
     #[10, 15, 20, 25, 27, 30, 35, 40]
 
-    inicio_user = time.time()
+    """inicio_user = time.time()
     modelo_knn_user = KNNUserBased(k_vizinhos=30, metrica='pearson_unha')
     print("--- Configurações do KNN user based ---")
     print(f"K vizinhos (k): {modelo_knn_user.k_vizinhos}")
@@ -44,27 +44,27 @@ def main():
     tempo_knn_user = fim_user - inicio_user
     print(f'Tempo: {tempo_knn_user:.2f}s')
 
-    erro_user = modelo_knn_user.avaliar_rmse_user_based(matriz_treino,matriz_treino)
+    erro_user = modelo_knn_user.avaliar_rmse_user_based(matriz_treino, matriz_treino)
     print(f'RMSE Treino: {erro_user:.4f}')
     print("------------------------------")
-    rmse_validacao = modelo_knn_user.avaliar_rmse_user_based(matriz_treino,matriz_validacao)
+    rmse_validacao = modelo_knn_user.avaliar_rmse_user_based(matriz_treino, matriz_validacao)
     print(f'RMSE Validação: {rmse_validacao:.4f}')
     print("------------------------------")
     rmse_teste = modelo_knn_user.avaliar_rmse_user_based(matriz_treino, matriz_teste)
-    print(f'RMSE Teste: {rmse_teste:.4f}')
+    print(f'RMSE Teste: {rmse_teste:.4f}')"""
 
     print("------------------------------")
     print("Item based")
     inicio_item = time.time()
-    modelo_knn_item = KNNItemBased(k_vizinhos=30,metrica='cosseno_ajustado')
+    modelo_knn_item = KNNItemBased(k_vizinhos=100, metrica='cosseno_ajustado')
     print("--- Configurações do KNN item based ---")
     print(f"K vizinhos (k): {modelo_knn_item.k_vizinhos}")
     print(f"Métrica usada: {modelo_knn_item.metrica}")
     print("-----------------------------------")
 
-    modelo_knn_item.fit(matriz_treino,medias_treino)
+    modelo_knn_item.fit(matriz_treino)
 
-    recomendacoes_item = modelo_knn_item.knn_item_based(matriz_treino,medias_treino,user_id=1)
+    recomendacoes_item = modelo_knn_item.item_based(matriz_treino, user_id=1)
     for posicao, (filme_id, nota) in enumerate(recomendacoes_item,start=1):
         print(f'{posicao}º filme -> 'f'ID: {filme_id} | 'f'Nota prevista: {nota:.2f}')
 
@@ -72,19 +72,20 @@ def main():
     tempo_knn_item = fim_item - inicio_item
     print(f'Tempo: {tempo_knn_item:.2f}s')
 
-    erro_item_treino = modelo_knn_item.avaliar_rmse_item_based(matriz_treino,matriz_treino,medias_treino)
-    print(f'RMSE: {erro_item_treino:.4f}')
+    erro_item_treino = (modelo_knn_item.avaliar_rmse_item_based(matriz_treino, matriz_treino))
+    print(f'RMSE teste: {erro_item_treino:.4f}')
     print("------------------------------")
-    erro_item_validacao = modelo_knn_item.avaliar_rmse_item_based(matriz_treino,matriz_validacao,medias_treino)
+    erro_item_validacao = (modelo_knn_item.avaliar_rmse_item_based(matriz_treino, matriz_validacao))
     print(f'RMSE Validação: {erro_item_validacao:.4f}')
     print("------------------------------")
-    erro_item_teste = modelo_knn_item.avaliar_rmse_item_based(matriz_treino, matriz_teste,medias_treino)
+    erro_item_teste = (modelo_knn_item.avaliar_rmse_item_based(matriz_treino, matriz_teste))
+
     print(f'RMSE Teste: {erro_item_teste:.4f}')
 
-    print("------------------------------")
+    """print("------------------------------")
     inicio_svd = time.time()
 
-    modelo_svd = svd_byfunk.SVD(reg=0.02, k_factors=10, epochs=20, learning_rate=0.005)
+    modelo_svd = svd_byfunk.SVD(reg=0.02, k_factors=200, epochs=20, learning_rate=0.005)
     print("--- Configurações do Modelo SVD ---")
     print(f"Fatores Latentes (k): {modelo_svd.k_factors}")
     print(f"Épocas de Treino: {modelo_svd.n_epochs}")
@@ -108,7 +109,7 @@ def main():
 
     rmse_teste_svd = modelo_svd.avaliar_rmse_svd(teste)
     print(f'RMSE Teste: {rmse_teste_svd:.4f}')
-    print("------------------------------")
+    print("------------------------------")"""
 
 
 if __name__ == "__main__":
