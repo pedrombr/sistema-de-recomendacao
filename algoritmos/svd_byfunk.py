@@ -58,7 +58,9 @@ class SVD:
         u = user_id - 1
         i = item_id - 1
 
-        return (self.media_global + self.u_bias[u] + self.i_bias[i] + np.dot(self.P[u], self.Q[i]))
+        pred = (self.media_global + self.u_bias[u] + self.i_bias[i] + np.dot(self.P[u], self.Q[i]))
+
+        return np.clip(pred, 1, 5)
 
     def avaliar_rmse_svd(self, base_df):
         lista_prev = []
@@ -77,3 +79,29 @@ class SVD:
                 pass
 
         return rmse(np.array(lista_prev), np.array(lista_real))
+
+    def recomendar_top_n(self, matriz_treino, user_id, n_recomendacoes=5):
+
+        if user_id not in matriz_treino.index:
+            return []
+
+        notas_usuario = matriz_treino.loc[user_id]
+
+        filmes_nao_avaliados = (notas_usuario[notas_usuario == 0].index.tolist())
+
+        recomendacoes = []
+
+        for filme_id in filmes_nao_avaliados:
+            try:
+
+                nota_prevista = self.predict(user_id, filme_id)
+
+                recomendacoes.append((filme_id, float(nota_prevista)))
+
+            except IndexError:
+                continue
+
+        # ordena pela maior nota prevista
+        recomendacoes.sort(key=lambda x: x[1], reverse=True)
+
+        return recomendacoes[:n_recomendacoes]

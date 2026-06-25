@@ -26,8 +26,8 @@ def main():
     # Cálculo da média para o Item-Based
     medias_treino = matriz_treino.replace(0, np.nan).mean(axis=1)
     #[10, 15, 20, 25, 27, 30, 35, 40]
-
-    """inicio_user = time.time()
+    #USER_BASED
+    inicio_user = time.time()
     modelo_knn_user = KNNUserBased(k_vizinhos=30, metrica='pearson_unha')
     print("--- Configurações do KNN user based ---")
     print(f"K vizinhos (k): {modelo_knn_user.k_vizinhos}")
@@ -51,12 +51,13 @@ def main():
     print(f'RMSE Validação: {rmse_validacao:.4f}')
     print("------------------------------")
     rmse_teste = modelo_knn_user.avaliar_rmse_user_based(matriz_treino, matriz_teste)
-    print(f'RMSE Teste: {rmse_teste:.4f}')"""
+    print(f'RMSE Teste: {rmse_teste:.4f}')
 
+    #ITEM_BASED
     print("------------------------------")
     print("Item based")
     inicio_item = time.time()
-    modelo_knn_item = KNNItemBased(k_vizinhos=100, metrica='cosseno_ajustado')
+    modelo_knn_item = KNNItemBased(k_vizinhos=5, metrica='pearson_unha')
     print("--- Configurações do KNN item based ---")
     print(f"K vizinhos (k): {modelo_knn_item.k_vizinhos}")
     print(f"Métrica usada: {modelo_knn_item.metrica}")
@@ -73,16 +74,16 @@ def main():
     print(f'Tempo: {tempo_knn_item:.2f}s')
 
     erro_item_treino = (modelo_knn_item.avaliar_rmse_item_based(matriz_treino, matriz_treino))
-    print(f'RMSE teste: {erro_item_treino:.4f}')
+    print(f'RMSE Treino: {erro_item_treino:.4f}')
     print("------------------------------")
     erro_item_validacao = (modelo_knn_item.avaliar_rmse_item_based(matriz_treino, matriz_validacao))
     print(f'RMSE Validação: {erro_item_validacao:.4f}')
     print("------------------------------")
     erro_item_teste = (modelo_knn_item.avaliar_rmse_item_based(matriz_treino, matriz_teste))
-
     print(f'RMSE Teste: {erro_item_teste:.4f}')
 
-    """print("------------------------------")
+    #FUNK_SVD
+    print("------------------------------")
     inicio_svd = time.time()
 
     modelo_svd = svd_byfunk.SVD(reg=0.02, k_factors=200, epochs=20, learning_rate=0.005)
@@ -99,6 +100,14 @@ def main():
     tempo_svd = fim_svd - inicio_svd
     print(f'Tempo de execução: {tempo_svd:.2f}s')
 
+    print("------------------------------")
+    print("TOP-N SVD")
+
+    recomendacoes_svd = (modelo_svd.recomendar_top_n(matriz_treino, user_id=1, n_recomendacoes=5))
+
+    for posicao, (filme_id, nota) in enumerate(recomendacoes_svd, start=1):
+        print(f'{posicao}º filme -> ' f'ID: {filme_id} | ' f'Nota prevista: {nota:.2f}')
+
     rmse_treino_svd = modelo_svd.avaliar_rmse_svd(treino)
     print(f'RMSE Treino: {rmse_treino_svd:.4f}')
     print("------------------------------")
@@ -109,7 +118,7 @@ def main():
 
     rmse_teste_svd = modelo_svd.avaliar_rmse_svd(teste)
     print(f'RMSE Teste: {rmse_teste_svd:.4f}')
-    print("------------------------------")"""
+    print("------------------------------")
 
 
 if __name__ == "__main__":
